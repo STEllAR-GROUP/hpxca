@@ -6,6 +6,9 @@
 set(tests
     foreach_range
     foreach_range_projection
+    transform_range
+    transform_range_binary
+    transform_range_binary2
    )
 
 foreach(test ${tests})
