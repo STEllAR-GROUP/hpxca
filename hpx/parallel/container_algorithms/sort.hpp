@@ -102,7 +102,9 @@ namespace hpx { namespace parallel { HPX_INLINE_NAMESPACE(v1)
                 traits::projected_range<Proj, Rng>,
                 traits::projected_range<Proj, Rng>
         >::value)>
-    typename util::detail::algorithm_result<ExPolicy, void>::type
+    typename util::detail::algorithm_result<
+        ExPolicy, typename traits::range_iterator<Rng>::type
+    >::type
     sort(ExPolicy && policy, Rng && rng, Compare && comp = Compare(),
         Proj && proj = Proj())
     {
