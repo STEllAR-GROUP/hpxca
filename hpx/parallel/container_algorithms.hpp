@@ -7,6 +7,7 @@
 #define HPX_PARALLEL_CONTAINER_ALGORITHM_JUL_18_2015_0958AM
 
 #include <hpx/parallel/container_algorithms/for_each.hpp>
+#include <hpx/parallel/container_algorithms/sort.hpp>
 #include <hpx/parallel/container_algorithms/transform.hpp>
 
 #endif

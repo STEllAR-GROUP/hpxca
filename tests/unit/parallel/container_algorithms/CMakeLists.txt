@@ -6,6 +6,7 @@
 set(tests
     foreach_range
     foreach_range_projection
+    sort_range
     transform_range
     transform_range_binary
     transform_range_binary2

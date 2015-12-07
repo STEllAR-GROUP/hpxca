@@ -24,6 +24,14 @@ namespace hpx { namespace parallel { namespace traits
         struct range_traits
         {};
 
+        template <typename Rng>
+        struct range_traits<Rng,
+            typename std::enable_if<traits::is_range<Rng>::value>::type>
+        {
+            typedef typename Rng::iterator iterator_type;
+            typedef typename Rng::iterator sentinel_type;
+        };
+
         template <typename Iterator>
         struct range_traits<boost::iterator_range<Iterator> >
         {
@@ -38,16 +46,24 @@ namespace hpx { namespace parallel { namespace traits
     {};
 
     ///////////////////////////////////////////////////////////////////////////
+    namespace detail
+    {
+        template <typename Rng, typename Enable = void>
+        struct range_iterator
+        {};
+
+        template <typename Rng>
+        struct range_iterator<Rng,
+            typename std::enable_if<traits::is_range<Rng>::value>::type>
+        {
+            typedef typename range_traits<Rng>::iterator_type type;
+        };
+    }
+
     template <typename Rng, typename Enable = void>
     struct range_iterator
+      : detail::range_iterator<typename hpx::util::decay<Rng>::type>
     {};
-
-    template <typename Rng>
-    struct range_iterator<Rng,
-        typename std::enable_if<traits::is_range<Rng>::value>::type>
-    {
-        typedef typename range_traits<Rng>::iterator_type type;
-    };
 
     ///////////////////////////////////////////////////////////////////////////
     template <typename Rng, typename Enable = void>

@@ -8,6 +8,7 @@
 
 #include <hpx/config.hpp>
 #include <hpx/util/decay.hpp>
+#include <hpx/util/always_void.hpp>
 
 #include <boost/range/iterator_range_core.hpp>
 
@@ -17,9 +18,62 @@ namespace hpx { namespace parallel { namespace traits
 {
     namespace detail
     {
+        ///////////////////////////////////////////////////////////////////////
+        template <typename T, typename Enable = void>
+        struct has_value_type
+          : std::false_type
+        {};
+
+        template <typename T>
+        struct has_value_type<T,
+                typename hpx::util::always_void<typename T::value_type>::type>
+          : std::true_type
+        {};
+
+        template <typename T, typename Enable = void>
+        struct has_iterator
+          : std::false_type
+        {};
+
+        template <typename T>
+        struct has_iterator<T,
+                typename hpx::util::always_void<typename T::iterator>::type>
+          : std::true_type
+        {};
+
+        template <typename T, typename Enable = void>
+        struct has_size_type
+          : std::false_type
+        {};
+
+        template <typename T>
+        struct has_size_type<T,
+                typename hpx::util::always_void<typename T::size_type>::type>
+          : std::true_type
+        {};
+
+        template <typename T, typename Enable = void>
+        struct has_reference
+          : std::false_type
+        {};
+
+        template <typename T>
+        struct has_reference<T,
+                typename hpx::util::always_void<typename T::reference>::type>
+          : std::true_type
+        {};
+
+        template <typename T, typename Enable = void>
+        struct is_container
+          : std::integral_constant<bool,
+                has_value_type<T>::value && has_iterator<T>::value &&
+                has_size_type<T>::value && has_reference<T>::value>
+        {};
+
+        ///////////////////////////////////////////////////////////////////////
         template <typename Rng, typename Enable = void>
         struct is_range
-          : std::false_type
+          : is_container<Rng>
         {};
 
         template <typename Iterator>

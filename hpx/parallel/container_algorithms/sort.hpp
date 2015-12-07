@@ -3,16 +3,16 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-/// \file parallel/container_algorithms/for_each.hpp
+/// \file parallel/container_algorithms/sort.hpp
 
-#if !defined(HPX_PARALLEL_CONTAINER_ALGORITHM_FOR_EACH_JUL_18_2015_0959AM)
-#define HPX_PARALLEL_CONTAINER_ALGORITHM_FOR_EACH_JUL_18_2015_0959AM
+#if !defined(HPX_PARALLEL_CONTAINER_ALGORITHM_SORT_DEC_06_2015_1133AM)
+#define HPX_PARALLEL_CONTAINER_ALGORITHM_SORT_DEC_06_2015_1133AM
 
 #include <hpx/config.hpp>
 #include <hpx/util/move.hpp>
 #include <hpx/traits/concepts.hpp>
 
-#include <hpx/parallel/algorithms/for_each.hpp>
+#include <hpx/parallel/algorithms/sort.hpp>
 #include <hpx/parallel/traits/is_range.hpp>
 #include <hpx/parallel/traits/projected_range.hpp>
 #include <hpx/parallel/traits/range_traits.hpp>
@@ -24,21 +24,19 @@
 
 namespace hpx { namespace parallel { HPX_INLINE_NAMESPACE(v1)
 {
-    /// Applies \a f to the result of dereferencing every iterator in the
-    /// given range \a rng.
+    /// Sorts the elements in the range \a rng  in ascending order. The
+    /// order of equal elements is not guaranteed to be preserved. The function
+    /// uses the given comparison function object comp (defaults to using
+    /// operator<()).
     ///
-    /// \note   Complexity: Applies \a f exactly \a size(rng) times.
+    /// \note   Complexity: O(Nlog(N)),
+    ///             where N = std::distance(begin(rng), end(rng)) comparisons.
     ///
-    /// If \a f returns a result, the result is ignored.
-    ///
-    /// If the type of \a first satisfies the requirements of a mutable
-    /// iterator, \a f may apply non-constant functions through the
-    /// dereferenced iterator.
-    ///
-    /// Unlike its sequential form, the parallel overload of
-    /// \a for_each does not return a copy of its \a Function parameter,
-    /// since parallelization may not permit efficient state
-    /// accumulation.
+    /// A sequence is sorted with respect to a comparator \a comp and a
+    /// projection \a proj if for every iterator i pointing to the sequence and
+    /// every non-negative integer n such that i + n is a valid iterator
+    /// pointing to an element of the sequence, and
+    /// INVOKE(comp, INVOKE(proj, *(i + n)), INVOKE(proj, *i)) == false.
     ///
     /// \tparam ExPolicy    The type of the execution policy to use (deduced).
     ///                     It describes the manner in which the execution
@@ -47,10 +45,8 @@ namespace hpx { namespace parallel { HPX_INLINE_NAMESPACE(v1)
     /// \tparam Rng         The type of the source range used (deduced).
     ///                     The iterators extracted from this range type must
     ///                     meet the requirements of an input iterator.
-    /// \tparam F           The type of the function/function object to use
-    ///                     (deduced). Unlike its sequential form, the parallel
-    ///                     overload of \a for_each requires \a F to meet the
-    ///                     requirements of \a CopyConstructible.
+    /// \tparam Comp        The type of the function/function object to use
+    ///                     (deduced).
     /// \tparam Proj        The type of an optional projection function. This
     ///                     defaults to \a util::projection_identity
     ///
@@ -58,22 +54,19 @@ namespace hpx { namespace parallel { HPX_INLINE_NAMESPACE(v1)
     ///                     the iterations.
     /// \param rng          Refers to the sequence of elements the algorithm
     ///                     will be applied to.
-    /// \param f            Specifies the function (or function object) which
-    ///                     will be invoked for each of the elements in the
-    ///                     sequence specified by [first, last).
-    ///                     The signature of this predicate
-    ///                     should be equivalent to:
-    ///                     \code
-    ///                     <ignored> pred(const Type &a);
-    ///                     \endcode \n
-    ///                     The signature does not need to have const&. The
-    ///                     type \a Type must be such that an object of
-    ///                     type \a InIter can be dereferenced and then
-    ///                     implicitly converted to Type.
+    /// \param comp         comp is a callable object. The return value of the
+    ///                     INVOKE operation applied to an object of type Comp,
+    ///                     when contextually converted to bool, yields true if
+    ///                     the first argument of the call is less than the
+    ///                     second, and false otherwise. It is assumed that comp
+    ///                     will not apply any non-constant function through the
+    ///                     dereferenced iterator.
     /// \param proj         Specifies the function (or function object) which
-    ///                     will be invoked for each of the elements as a
+    ///                     will be invoked for each pair of elements as a
     ///                     projection operation before the actual predicate
-    ///                     \a is invoked.
+    ///                     \a comp is invoked.
+    ///
+    /// \a comp has to induce a strict weak ordering on the values.
     ///
     /// The application of function objects in parallel algorithm
     /// invoked with an execution policy object of type
@@ -86,30 +79,35 @@ namespace hpx { namespace parallel { HPX_INLINE_NAMESPACE(v1)
     /// permitted to execute in an unordered fashion in unspecified
     /// threads, and indeterminately sequenced within each thread.
     ///
-    /// \returns  The \a for_each_n algorithm returns a
-    ///           \a hpx::future<InIter> if the execution policy is of
+    /// \returns  The \a sort algorithm returns a
+    ///           \a hpx::future<Iter> if the execution policy is of
     ///           type
     ///           \a sequential_task_execution_policy or
-    ///           \a parallel_task_execution_policy and returns \a InIter
+    ///           \a parallel_task_execution_policy and returns \a Iter
     ///           otherwise.
     ///           It returns \a last.
-    ///
     template <typename Proj = util::projection_identity,
-        typename ExPolicy, typename Rng, typename F,
+        typename ExPolicy, typename Rng,
+        typename Compare = std::less<
+            typename std::remove_reference<
+                typename traits::projected_range_result_of<Proj, Rng>::type
+            >::type
+        >,
     HPX_CONCEPT_REQUIRES_(
         is_execution_policy<ExPolicy>::value &&
         traits::is_range<Rng>::value &&
         traits::is_projected_range<Proj, Rng>::value &&
         traits::is_indirect_callable<
-            F, traits::projected_range<Proj, Rng>
+            Compare,
+                traits::projected_range<Proj, Rng>,
+                traits::projected_range<Proj, Rng>
         >::value)>
-    typename util::detail::algorithm_result<
-        ExPolicy, typename traits::range_iterator<Rng>::type
-    >::type
-    for_each(ExPolicy && policy, Rng && rng, F && f, Proj && proj = Proj{})
+    typename util::detail::algorithm_result<ExPolicy, void>::type
+    sort(ExPolicy && policy, Rng && rng, Compare && comp = Compare(),
+        Proj && proj = Proj())
     {
-        return for_each(std::forward<ExPolicy>(policy),
-            boost::begin(rng), boost::end(rng), std::forward<F>(f),
+        return sort(std::forward<ExPolicy>(policy),
+            boost::begin(rng), boost::end(rng), std::forward<Compare>(comp),
             std::forward<Proj>(proj));
     }
 }}}
